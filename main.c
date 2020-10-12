@@ -51,16 +51,18 @@ const Timer_A_UpModeConfig upConfig =
   TIMER_A_DO_CLEAR                    // Clear value
 };
 
-
-int main(void)
+void setupGpios(void)
 {
     //Set Led1 red and Led2 blue as output
     MAP_GPIO_setAsOutputPin(GPIO_PORT_P1, GPIO_PIN0);
     MAP_GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN2);
     //Turn on the led1 and led2
-    ROM_GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    MAP_GPIO_setOutputLowOnPin(GPIO_PORT_P1, GPIO_PIN2);
     ROM_GPIO_setOutputHighOnPin(GPIO_PORT_P1, GPIO_PIN0);
+}
 
+void setupSystick(void)
+{
     MAP_SysTick_enableModule();
     //wait 0.1 secs to turn on led1
     MAP_SysTick_setPeriod(100000);
@@ -69,8 +71,10 @@ int main(void)
 
     MAP_SysTick_enableInterrupt();
     MAP_Interrupt_enableMaster();
+}
 
-
+void setupTimer(void)
+{
     // Configurar el Timer_A1 en Up Mode (incremental)
     MAP_Timer_A_configureUpMode(TIMER_A3_BASE, &upConfig);
 
@@ -83,6 +87,15 @@ int main(void)
     // Inicia el timer
     MAP_Timer_A_startCounter(TIMER_A3_BASE, TIMER_A_UP_MODE);
 
+    // Habilita al procesador para que responda a interrupciones
+    MAP_Interrupt_enableMaster();
+}
+
+int main(void)
+{
+    setupGpios();
+    setupSystick();
+    setupTimer();
 
     while (1)
     {
@@ -97,4 +110,12 @@ void SysTick_Handler(void)
   MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
 }
 
+void TA3_0_IRQHandler(void)
+{
+  // Conmuta el estado de la salida digital P1.0 (LED)
+  MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
+
+  // Resetea el flag de interrupcion del Timer_A3
+  MAP_Timer_A_clearCaptureCompareInterrupt(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+}
 

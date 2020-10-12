@@ -53,6 +53,7 @@ extern unsigned long __STACK_END;
 
 /* External declarations for the interrupt handlers used by the application. */
 extern void SysTick_Handler (void);
+extern void TA3_0_IRQHandler (void);
 
 
 /*-----------------------------------------------------------*/
@@ -91,7 +92,7 @@ void (* const interruptVectors[])(void) =
     defaultISR,                             /* TA1_N ISR                 */
     defaultISR,                             /* TA2_0 ISR                 */
     defaultISR,                             /* TA2_N ISR                 */
-    defaultISR,                             /* TA3_0 ISR                 */
+    TA3_0_IRQHandler,                             /* TA3_0 ISR                 */
     defaultISR,                             /* TA3_N ISR                 */
     defaultISR,                             /* EUSCIA0 ISR               */
     defaultISR,                             /* EUSCIA1 ISR               */
