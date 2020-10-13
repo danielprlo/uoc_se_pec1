@@ -53,7 +53,7 @@ extern unsigned long __STACK_END;
 
 /* External declarations for the interrupt handlers used by the application. */
 extern void SysTick_Handler (void);
-extern void TA3_0_IRQHandler (void);
+extern void TA0_0_IRQHandler (void);
 extern void PORT1_IRQHandler (void);
 
 
@@ -78,7 +78,7 @@ void (* const interruptVectors[])(void) =
     defaultISR,                             /* Debug monitor handler     */
     0,                                      /* Reserved                  */
 	defaultISR,                     		/* The PendSV handler        */
-	SysTick_Handler,                             /* The SysTick handler       */
+	SysTick_Handler,                        /* The SysTick handler       */
     defaultISR,                             /* PSS ISR                   */
     defaultISR,                             /* CS ISR                    */
     defaultISR,                             /* PCM ISR                   */
@@ -87,13 +87,13 @@ void (* const interruptVectors[])(void) =
     defaultISR,                             /* FLCTL ISR                 */
     defaultISR,                             /* COMP0 ISR                 */
     defaultISR,                             /* COMP1 ISR                 */
-    defaultISR,                       /* TA0_0 ISR                 */
+    TA0_0_IRQHandler,                       /* TA0_0 ISR                 */
     defaultISR,                             /* TA0_N ISR                 */
     defaultISR,                             /* TA1_0 ISR                 */
     defaultISR,                             /* TA1_N ISR                 */
     defaultISR,                             /* TA2_0 ISR                 */
     defaultISR,                             /* TA2_N ISR                 */
-    TA3_0_IRQHandler,                             /* TA3_0 ISR                 */
+    defaultISR,                             /* TA3_0 ISR                 */
     defaultISR,                             /* TA3_N ISR                 */
     defaultISR,                             /* EUSCIA0 ISR               */
     defaultISR,                             /* EUSCIA1 ISR               */

@@ -38,29 +38,30 @@
 // Include DriverLib (MSP432 Peripheral Driver Library)
 #include "driverlib.h"
 
-#define TIMER_PERIOD    300000  // Numero de ciclos de clock
+#define TIMER_PERIOD    2343
 
 // Timer_A UpMode Configuration
 Timer_A_UpModeConfig upConfig =
 {
-  TIMER_A_CLOCKSOURCE_SMCLK,          // SMCLK source = 3 MHz
-  TIMER_A_CLOCKSOURCE_DIVIDER_64,     // SMCLK/64
-  TIMER_PERIOD,                       // 0.5 seconds
-  TIMER_A_TAIE_INTERRUPT_DISABLE,     // Disable Timer interrupt
-  TIMER_A_CCIE_CCR0_INTERRUPT_ENABLE, // Enable CCR0 interrupt
-  TIMER_A_DO_CLEAR                    // Clear value
+     TIMER_A_CLOCKSOURCE_SMCLK,
+     TIMER_A_CLOCKSOURCE_DIVIDER_64,
+     TIMER_PERIOD,
+     TIMER_A_TAIE_INTERRUPT_DISABLE,
+     TIMER_A_CCIE_CCR0_INTERRUPT_ENABLE,
+     TIMER_A_DO_CLEAR
 };
 
 
-static int32_t freqs[5] = {
-     30000,
-     150000,
-     300000,
-     450000,
-     600000
+static uint_fast16_t freqs[5] =
+{
+     23437,
+     4687,
+     2343,
+     1406,
+     1171
 };
 
-static int32_t pointerValue = 2;
+volatile int8_t freqPointer = 2;
 
 void setupPort(void)
 {
@@ -103,10 +104,10 @@ void setupSystick(void)
 
 void setupTimer(void)
 {
-    MAP_Timer_A_configureUpMode(TIMER_A3_BASE, &upConfig);
+    MAP_Timer_A_configureUpMode(TIMER_A0_BASE, &upConfig);
     MAP_Interrupt_enableSleepOnIsrExit();
-    MAP_Interrupt_enableInterrupt(INT_TA3_0);
-    MAP_Timer_A_startCounter(TIMER_A3_BASE, TIMER_A_UP_MODE);
+    MAP_Interrupt_enableInterrupt(INT_TA0_0);
+    MAP_Timer_A_startCounter(TIMER_A0_BASE, TIMER_A_UP_MODE);
     MAP_Interrupt_enableMaster();
 }
 
@@ -128,36 +129,33 @@ void SysTick_Handler(void)
   MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
 }
 
-void TA3_0_IRQHandler(void)
+void TA0_0_IRQHandler(void)
 {
   MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
-  MAP_Timer_A_clearCaptureCompareInterrupt(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+  MAP_Timer_A_clearCaptureCompareInterrupt(TIMER_A0_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
 }
 
 void PORT1_IRQHandler(void)
 {
     MAP_Interrupt_disableMaster();
     uint32_t status;
+    int8_t freqNewVal;
 
     status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
     MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
 
     if(status & GPIO_PIN1) {
-        if (pointerValue +1 <= 4 && pointerValue +1 >= 0) {
-            pointerValue++;
-            upConfig.timerPeriod = freqs[pointerValue];
-            setupTimer();
-        }
-
+        freqNewVal = freqPointer +1;
+    } else {
+        freqNewVal = freqPointer -1;
     }
 
-    if (status & GPIO_PIN4) {
-        if (pointerValue -1 <= 4 && pointerValue -1 >= 0) {
-            pointerValue--;
-            upConfig.timerPeriod = freqs[pointerValue];
-            setupTimer();
-        }
+    if (freqNewVal <= 4 && freqNewVal >= 0) {
+        freqPointer          = freqNewVal;
+        upConfig.timerPeriod = freqs[freqPointer];
+        setupTimer();
     }
+
     MAP_Interrupt_enableMaster();
 }
 
