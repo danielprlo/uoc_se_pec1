@@ -41,7 +41,7 @@
 #define TIMER_PERIOD    300000  // Numero de ciclos de clock
 
 // Timer_A UpMode Configuration
-const Timer_A_UpModeConfig upConfig =
+Timer_A_UpModeConfig upConfig =
 {
   TIMER_A_CLOCKSOURCE_SMCLK,          // SMCLK source = 3 MHz
   TIMER_A_CLOCKSOURCE_DIVIDER_64,     // SMCLK/64
@@ -51,9 +51,15 @@ const Timer_A_UpModeConfig upConfig =
   TIMER_A_DO_CLEAR                    // Clear value
 };
 
-int *timerPointer = &upConfig;
 
-static int32_t freqs[5] = {30000,150000,300000,450000,600000};
+static int32_t freqs[5] = {
+     30000,
+     150000,
+     300000,
+     450000,
+     600000
+};
+
 static int32_t pointerValue = 2;
 
 void setupPort(void)
@@ -130,28 +136,28 @@ void TA3_0_IRQHandler(void)
 
 void PORT1_IRQHandler(void)
 {
+    MAP_Interrupt_disableMaster();
     uint32_t status;
-    int32_t newPointer;
 
     status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
     MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
 
     if(status & GPIO_PIN1) {
-        newPointer = pointerValue += 1;
-        if (newPointer <= 4 && newPointer >= 0) {
-            pointerValue = newPointer;
-            *timerPointer.timerPeriod = 600000;
+        if (pointerValue +1 <= 4 && pointerValue +1 >= 0) {
+            pointerValue++;
+            upConfig.timerPeriod = freqs[pointerValue];
+            setupTimer();
         }
-        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
+
     }
 
     if (status & GPIO_PIN4) {
-        newPointer = pointerValue -= 1;
-        if (newPointer <= 4 && newPointer >= 0) {
-            pointerValue = newPointer;
-            upConfig.timerPeriod = 600000;
+        if (pointerValue -1 <= 4 && pointerValue -1 >= 0) {
+            pointerValue--;
+            upConfig.timerPeriod = freqs[pointerValue];
+            setupTimer();
         }
-        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
     }
+    MAP_Interrupt_enableMaster();
 }
 
