@@ -38,7 +38,7 @@
 // Include DriverLib (MSP432 Peripheral Driver Library)
 #include "driverlib.h"
 
-#define TIMER_PERIOD    23437  // Numero de ciclos de clock
+#define TIMER_PERIOD    300000  // Numero de ciclos de clock
 
 // Timer_A UpMode Configuration
 const Timer_A_UpModeConfig upConfig =
@@ -50,6 +50,28 @@ const Timer_A_UpModeConfig upConfig =
   TIMER_A_CCIE_CCR0_INTERRUPT_ENABLE, // Enable CCR0 interrupt
   TIMER_A_DO_CLEAR                    // Clear value
 };
+
+int *timerPointer = &upConfig;
+
+static int32_t freqs[5] = {30000,150000,300000,450000,600000};
+static int32_t pointerValue = 2;
+
+void setupPort(void)
+{
+    MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_setAsInputPinWithPullUpResistor(GPIO_PORT_P1, GPIO_PIN4);
+
+    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, GPIO_PIN4);
+
+    MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN1);
+    MAP_GPIO_enableInterrupt(GPIO_PORT_P1, GPIO_PIN4);
+
+    MAP_Interrupt_enableInterrupt(INT_PORT1);
+    MAP_Interrupt_enableInterrupt(INT_PORT4);
+
+    MAP_Interrupt_enableMaster();
+}
 
 void setupGpios(void)
 {
@@ -68,26 +90,17 @@ void setupSystick(void)
     MAP_SysTick_setPeriod(100000);
     //wait 0.9 secs to turn off led1
     MAP_SysTick_setPeriod(900000);
-
     MAP_SysTick_enableInterrupt();
     MAP_Interrupt_enableMaster();
 }
 
+
 void setupTimer(void)
 {
-    // Configurar el Timer_A1 en Up Mode (incremental)
     MAP_Timer_A_configureUpMode(TIMER_A3_BASE, &upConfig);
-
-    // Habilita el procesador para que duerma al acabar la ISR
     MAP_Interrupt_enableSleepOnIsrExit();
-
-    // Habilita la interrupcion del Timer_A3
     MAP_Interrupt_enableInterrupt(INT_TA3_0);
-
-    // Inicia el timer
     MAP_Timer_A_startCounter(TIMER_A3_BASE, TIMER_A_UP_MODE);
-
-    // Habilita al procesador para que responda a interrupciones
     MAP_Interrupt_enableMaster();
 }
 
@@ -95,27 +108,50 @@ int main(void)
 {
     setupGpios();
     setupSystick();
+    setupPort();
     setupTimer();
 
     while (1)
     {
-       // Conmuta el microcontrolador a modo de bajo consumo LPM0
        MAP_PCM_gotoLPM0();
     }
 }
 
 void SysTick_Handler(void)
 {
-  // Conmuta el estado de la salida digital P1.0 (LED)
   MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P1, GPIO_PIN0);
 }
 
 void TA3_0_IRQHandler(void)
 {
-  // Conmuta el estado de la salida digital P1.0 (LED)
   MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
-
-  // Resetea el flag de interrupcion del Timer_A3
   MAP_Timer_A_clearCaptureCompareInterrupt(TIMER_A3_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
+}
+
+void PORT1_IRQHandler(void)
+{
+    uint32_t status;
+    int32_t newPointer;
+
+    status = MAP_GPIO_getEnabledInterruptStatus(GPIO_PORT_P1);
+    MAP_GPIO_clearInterruptFlag(GPIO_PORT_P1, status);
+
+    if(status & GPIO_PIN1) {
+        newPointer = pointerValue += 1;
+        if (newPointer <= 4 && newPointer >= 0) {
+            pointerValue = newPointer;
+            *timerPointer.timerPeriod = 600000;
+        }
+        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    }
+
+    if (status & GPIO_PIN4) {
+        newPointer = pointerValue -= 1;
+        if (newPointer <= 4 && newPointer >= 0) {
+            pointerValue = newPointer;
+            upConfig.timerPeriod = 600000;
+        }
+        MAP_GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    }
 }
 
